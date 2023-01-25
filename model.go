@@ -8,8 +8,21 @@ type BaseModel struct {
 	UpdatedAt time.Time
 }
 
-type User struct {
+type Author struct {
 	BaseModel
 	Name string
 	Age  int
+}
+
+type Comic struct {
+	BaseModel
+	Name  string
+	Price int
+	Book  []Volume `gorm:"foreignKey:ID"`
+}
+
+type Volume struct {
+	BaseModel
+	Vol   int
+	Comic Comic `gorm:"foreignKey:ID"`
 }
