@@ -16,13 +16,14 @@ type Author struct {
 
 type Comic struct {
 	BaseModel
-	Name  string
-	Price int
-	Book  []Volume `gorm:"foreignKey:ID"`
+	Name   string
+	Volume []Volume `gorm:"foreignKey:ID"`
 }
 
 type Volume struct {
 	BaseModel
-	Vol   int
-	Comic Comic `gorm:"foreignKey:ID"`
+	Vol         int
+	Price       int
+	PublishDate time.Time
+	Comic       Comic `gorm:"foreignKey:ID"`
 }
