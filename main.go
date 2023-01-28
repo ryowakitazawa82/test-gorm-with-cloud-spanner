@@ -19,12 +19,7 @@ var appName = "myapp"
 var spannerPgString string = os.Getenv("CONNECTION_STRING")
 
 type Serving struct {
-	Client GameUserOperation
-}
-
-type User struct {
-	Name string `json:"name"`
-	Id   string `json:"id"`
+	Client BookOperation
 }
 
 func main() {
@@ -38,7 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer func() {
-		db, _ := client.sc.DB()
+		db, _ := client.db.DB()
 		db.Close()
 	}()
 
@@ -57,13 +52,11 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(httplog.RequestLogger(httpLogger))
 
-	r.Get("/ping", s.pingPong)
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		render.JSON(w, r, map[string]string{"message": "pong"})
+	})
 
-	r.Get("/api/user_id/{user_id:[a-z0-9-.]+}", s.getUserItems)
-
-	r.Post("/api/user/{user_name:[a-z0-9-.]+}", s.createUser)
-
-	r.Put("/api/user_id/{user_id:[a-z0-9-.]+}/{item_id:[a-z0-9-.]+}", s.addItemToUser)
+	r.Post("/api/user/{user_name:[a-z0-9-.]+}", s.registerAuthor)
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
 		oplog.Err(err)
@@ -76,44 +69,23 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
 }
 
-func (s Serving) getUserItems(w http.ResponseWriter, r *http.Request) {
-	userID := chi.URLParam(r, "user_id")
-	ctx := r.Context()
-	results, err := s.Client.getUserItems(ctx, w, userID)
-	if err != nil {
-		errorRender(w, r, http.StatusInternalServerError, err)
-		return
-	}
-	render.JSON(w, r, results)
-}
-
-func (s Serving) createUser(w http.ResponseWriter, r *http.Request) {
+func (s Serving) registerAuthor(w http.ResponseWriter, r *http.Request) {
 	userName := chi.URLParam(r, "user_name")
+	birthDate := chi.URLParam(r, "birth_date")
+	birthTime, err := time.Parse("2006-01-02", birthDate)
+	if err != nil {
+		errorRender(w, r, 500, err)
+	}
 	ctx := r.Context()
-	id, err := s.Client.createUser(ctx, w, userName)
+	author := Author{
+		Name:      userName,
+		BirthDate: birthTime,
+	}
+	id, err := s.Client.registerAuthor(ctx, w, author)
 	if err != nil {
 		errorRender(w, r, http.StatusInternalServerError, err)
 		return
 	}
-	render.JSON(w, r, User{
-		Id:   id,
-		Name: userName,
-	})
-}
-
-func (s Serving) addItemToUser(w http.ResponseWriter, r *http.Request) {
-	userID := chi.URLParam(r, "user_id")
-	itemID := chi.URLParam(r, "item_id")
-	ctx := r.Context()
-	err := s.Client.addItemToUser(ctx, w, Users{UserID: userID}, ItemParams{ItemID: itemID})
-	if err != nil {
-		errorRender(w, r, http.StatusInternalServerError, err)
-		return
-	}
-	render.JSON(w, r, map[string]string{})
-}
-
-func (s Serving) pingPong(w http.ResponseWriter, r *http.Request) {
-	render.Status(r, http.StatusOK)
-	render.PlainText(w, r, "Pong!\n")
+	res := map[string]string{"id": id, "username": userName}
+	render.JSON(w, r, res)
 }
