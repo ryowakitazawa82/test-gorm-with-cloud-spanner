@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -56,7 +57,7 @@ func main() {
 		render.JSON(w, r, map[string]string{"message": "pong"})
 	})
 
-	r.Post("/api/user/{user_name:[a-z0-9-.]+}", s.registerAuthor)
+	r.Post("/api/author/{user_name:[a-z0-9-.]+}", s.registerAuthor)
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
 		oplog.Err(err)
@@ -70,8 +71,18 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 }
 
 func (s Serving) registerAuthor(w http.ResponseWriter, r *http.Request) {
+
+	p := map[string]string{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&p); err != nil {
+		errorRender(w, r, 500, err)
+	}
+
+	defer r.Body.Close()
+
+	birthDate := p["birth_date"]
 	userName := chi.URLParam(r, "user_name")
-	birthDate := chi.URLParam(r, "birth_date")
+
 	birthTime, err := time.Parse("2006-01-02", birthDate)
 	if err != nil {
 		errorRender(w, r, 500, err)

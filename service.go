@@ -41,5 +41,13 @@ func newClient(ctx context.Context, spannerString string) (dbClient, error) {
 }
 
 func (d dbClient) registerAuthor(ctx context.Context, w io.Writer, author Author) (string, error) {
-	return "", nil
+	randomId := genId()
+
+	author.ID = randomId
+	res := d.db.Debug().Create(&author)
+	if res.Error != nil {
+		return "", res.Error
+	}
+
+	return randomId, nil
 }

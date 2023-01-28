@@ -12,7 +12,6 @@ type Author struct {
 	BaseModel
 	Name      string
 	BirthDate time.Time `sql:"not null;type:date"`
-	Age       int
 }
 
 type Comic struct {
