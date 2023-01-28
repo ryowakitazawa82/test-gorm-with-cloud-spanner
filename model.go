@@ -10,8 +10,9 @@ type BaseModel struct {
 
 type Author struct {
 	BaseModel
-	Name string
-	Age  int
+	Name      string
+	BirthDate time.Time `sql:"not null;type:date"`
+	Age       int
 }
 
 type Comic struct {
@@ -22,6 +23,7 @@ type Comic struct {
 
 type Volume struct {
 	BaseModel
+	Name        string
 	Vol         int
 	Price       int
 	PublishDate time.Time
