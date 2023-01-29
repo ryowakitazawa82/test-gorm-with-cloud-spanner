@@ -12,7 +12,7 @@ import (
 
 type BookOperation interface {
 	registerAuthor(context.Context, io.Writer, Author) (string, error)
-	addComic(context.Context, io.Writer, Comic) (string, error)
+	addComicAndVolume(context.Context, io.Writer, Comic, Volume) error
 	// listComics(context.Context, io.Writer, string) ([]Comic, error)
 }
 
@@ -52,14 +52,17 @@ func (d dbClient) registerAuthor(ctx context.Context, w io.Writer, author Author
 	return randomId, nil
 }
 
-func (d dbClient) addComic(ctx context.Context, w io.Writer, comic Comic) (string, error) {
-	randomId := genId()
-
-	comic.ID = randomId
-	res := d.db.Debug().Create(&comic)
-	if res.Error != nil {
-		return "", res.Error
+func (d dbClient) addComicAndVolume(ctx context.Context, w io.Writer, comic Comic, volume Volume) error {
+	if err := d.db.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&comic); res.Error != nil {
+			return res.Error
+		}
+		if res := tx.Create(&volume); res.Error != nil {
+			return res.Error
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
-
-	return randomId, nil
+	return nil
 }
