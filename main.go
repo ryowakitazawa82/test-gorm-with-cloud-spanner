@@ -100,3 +100,31 @@ func (s Serving) registerAuthor(w http.ResponseWriter, r *http.Request) {
 	res := map[string]string{"id": id, "username": userName}
 	render.JSON(w, r, res)
 }
+
+func (s Serving) addComicAndVolume(w http.ResponseWriter, r *http.Request) {
+
+	p := map[string]string{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&p); err != nil {
+		errorRender(w, r, 500, err)
+	}
+
+	defer r.Body.Close()
+
+	ctx := r.Context()
+	comic := Comic{
+		Name: "dummy",
+	}
+	volume := Volume{
+		Name:  "dummy",
+		Vol:   1,
+		Price: 100,
+	}
+
+	err := s.Client.addComicAndVolume(ctx, w, comic, volume)
+	if err != nil {
+		errorRender(w, r, http.StatusInternalServerError, err)
+		return
+	}
+	render.JSON(w, r, map[string]string{})
+}
