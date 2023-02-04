@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -10,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httplog"
 	"github.com/go-chi/render"
+	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -62,6 +66,7 @@ func main() {
 
 	r.Route("/api", func(s chi.Router) {
 		s.Post("/create-random-simgers-and-albums", m.CreateRandomSingersAndAlbums)
+		s.Get("/search-album", m.SearchAlbumsUsingNamedArgument)
 	})
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
@@ -78,4 +83,24 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 func (m *Music) CreateRandomSingersAndAlbums(w http.ResponseWriter, r *http.Request) {
 	CreateRandomSingersAndAlbums(m.db)
 	render.JSON(w, r, struct{}{})
+}
+
+func (m *Music) SearchAlbumsUsingNamedArgument(w http.ResponseWriter, r *http.Request) {
+	log.Println("Searching for albums released before 1900")
+	var albums []*Album
+	if err := m.db.Where(
+		"release_date < ?",
+		datatypes.Date(time.Date(1900, time.January, 1, 0, 0, 0, 0, time.UTC)),
+	).Order("release_date asc").Find(&albums).Error; err != nil {
+		fmt.Printf("Failed to load albums: %v", err)
+		errorRender(w, r, 500, err)
+	}
+	if len(albums) == 0 {
+		errorRender(w, r, 500, errors.New("album not found"))
+	} else {
+		for _, album := range albums {
+			log.Printf("Album %q was released at %v\n", album.Title, time.Time(album.ReleaseDate).Format("2006-01-02"))
+		}
+		render.JSON(w, r, albums)
+	}
 }
