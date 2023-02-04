@@ -21,3 +21,5 @@
 go.work
 
 author_apps/
+
+test-local.sh
