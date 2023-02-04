@@ -18,8 +18,12 @@ import (
 var appName = "sampleapp"
 
 // like, export CONNECTION_STRING="host=localhost port=15432 database=musics"
-var connString = os.Getenv("CONNECTION_STRING")
+var connString string = os.Getenv("CONNECTION_STRING")
 var servicePort string = os.Getenv("PORT")
+
+type Music struct {
+	db *gorm.DB
+}
 
 func main() {
 
@@ -36,6 +40,8 @@ func main() {
 		db, _ := db.DB()
 		db.Close()
 	}()
+
+	m := Music{db: db}
 
 	ctx := context.Background()
 
@@ -54,7 +60,9 @@ func main() {
 		render.JSON(w, r, map[string]string{"message": "pong"})
 	})
 
-	// TODO: r.Post("/api/author/{user_name:[a-z0-9-.]+}", s.registerAuthor)
+	r.Route("/api", func(s chi.Router) {
+		s.Post("/create-random-simgers-and-albums", m.CreateRandomSingersAndAlbums)
+	})
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
 		oplog.Err(err)
@@ -65,4 +73,9 @@ func main() {
 var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err error) {
 	render.Status(r, httpCode)
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
+}
+
+func (m *Music) CreateRandomSingersAndAlbums(w http.ResponseWriter, r *http.Request) {
+	CreateRandomSingersAndAlbums(m.db)
+	render.JSON(w, r, struct{}{})
 }
