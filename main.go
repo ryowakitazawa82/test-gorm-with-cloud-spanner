@@ -17,6 +17,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/gorm/clause"
 )
 
 var appName = "sampleapp"
@@ -67,6 +68,7 @@ func main() {
 	r.Route("/api", func(s chi.Router) {
 		s.Post("/create-random-simgers-and-albums", m.CreateRandomSingersAndAlbums)
 		s.Get("/search-album", m.SearchAlbumsUsingNamedArgument)
+		s.Get("/search-album-with-singer/{lastName}", m.getAlbumInfo)
 	})
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
@@ -78,6 +80,18 @@ func main() {
 var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err error) {
 	render.Status(r, httpCode)
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
+}
+
+func (m *Music) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
+	var singers []*Singer
+	lastName := chi.URLParam(r, "lastName")
+	if err := m.db.Debug().Model(&Singer{}).Preload(clause.Associations).Where("last_name = ?", lastName).Find(&singers).Error; err != nil {
+		errorRender(w, r, 500, err)
+	}
+	if len(singers) == 0 {
+		errorRender(w, r, 404, errors.New("User not found"))
+	}
+	render.JSON(w, r, singers)
 }
 
 func (m *Music) CreateRandomSingersAndAlbums(w http.ResponseWriter, r *http.Request) {
