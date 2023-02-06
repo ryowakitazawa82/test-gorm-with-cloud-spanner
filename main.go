@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httplog"
 	"github.com/go-chi/render"
-	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -75,13 +73,12 @@ func main() {
 
 	r.Route("/api", func(s chi.Router) {
 		s.Get("/search-albums-of-singer/{lastName}", m.getAlbumInfo)
-		s.Post("/create-album-for-singer/{lastName}", m.createAlbum)
+		s.Post("/create-album-for-singer", m.createAlbum)
 	})
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
 		oplog.Err(err)
 	}
-
 }
 
 var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err error) {
@@ -89,21 +86,32 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
 }
 
+type SingerAlbum struct {
+	FirstName string `json:"first_name,omitempty"`
+	LastName  string `json:"last_name,omitempty"`
+	AlbumName string `json:"album_name,omitempty"`
+}
+
 func (m *Music) createAlbum(w http.ResponseWriter, r *http.Request) {
+
+	postData := SingerAlbum{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&postData); err != nil {
+		errorRender(w, r, 500, err)
+	}
+	defer r.Body.Close()
+
 	if err := m.db.Transaction(func(tx *gorm.DB) error {
-		singerId, err := CreateSinger(m.db, "tako", "sukeo")
+		singerId, err := CreateSinger(m.db, postData.FirstName, postData.LastName)
 		if err != nil {
-			log.Printf("Failed to create singer: %v\n", err)
 			errorRender(w, r, 500, err)
 		}
-		_, err = CreateAlbumWithRandomTracks(m.db, singerId, randAlbumTitle(), randInt(1, 22))
+		_, err = CreateAlbumWithRandomTracks(m.db, singerId, postData.AlbumName, randInt(1, 22))
 		if err != nil {
-			log.Printf("Failed to create album: %v\n", err)
 			errorRender(w, r, 500, err)
 		}
 		return nil
 	}); err != nil {
-		log.Printf("Transaction failed: %v\n", err)
 		errorRender(w, r, 500, err)
 	}
 	render.JSON(w, r, struct{}{})
@@ -112,38 +120,13 @@ func (m *Music) createAlbum(w http.ResponseWriter, r *http.Request) {
 func (m *Music) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 	var singers []*Singer
 	lastName := chi.URLParam(r, "lastName")
-	if err := m.db.Debug().Model(&Singer{}).Preload(clause.Associations).Where("last_name = ?", lastName).Find(&singers).Error; err != nil {
+	if err := m.db.Model(&Singer{}).Preload(clause.Associations).Where("last_name = ?", lastName).Debug().Find(&singers).Error; err != nil {
 		errorRender(w, r, 500, err)
 	}
 	if len(singers) == 0 {
 		errorRender(w, r, 404, errors.New("user not found"))
 	}
 	render.JSON(w, r, singers)
-}
-
-func (m *Music) CreateRandomSingersAndAlbums(w http.ResponseWriter, r *http.Request) {
-	CreateRandomSingersAndAlbums(m.db)
-	render.JSON(w, r, struct{}{})
-}
-
-func (m *Music) SearchAlbumsUsingNamedArgument(w http.ResponseWriter, r *http.Request) {
-	log.Println("Searching for albums released before 1900")
-	var albums []*Album
-	if err := m.db.Where(
-		"release_date < ?",
-		datatypes.Date(time.Date(1900, time.January, 1, 0, 0, 0, 0, time.UTC)),
-	).Order("release_date asc").Find(&albums).Error; err != nil {
-		fmt.Printf("Failed to load albums: %v", err)
-		errorRender(w, r, 500, err)
-	}
-	if len(albums) == 0 {
-		errorRender(w, r, 500, errors.New("album not found"))
-	} else {
-		for _, album := range albums {
-			log.Printf("Album %q was released at %v\n", album.Title, time.Time(album.ReleaseDate).Format("2006-01-02"))
-		}
-		render.JSON(w, r, albums)
-	}
 }
 
 func (m *Music) initData() {
