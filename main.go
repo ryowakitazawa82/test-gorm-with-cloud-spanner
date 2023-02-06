@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
-	"flag"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,8 +17,8 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 var appName = "sampleapp"
@@ -33,7 +33,7 @@ type Music struct {
 
 func main() {
 
-	migrateMode := flag.Bool("automigrate", false, "")
+	init := flag.Bool("init", false, "")
 	flag.Parse()
 
 	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
@@ -50,12 +50,12 @@ func main() {
 		db.Close()
 	}()
 
-	if *migrateMode {
-		doAutoMigrate(db)
+	m := Music{db: db}
+
+	if *init {
+		m.initData()
 		return
 	}
-
-	m := Music{db: db}
 
 	ctx := context.Background()
 
@@ -64,7 +64,6 @@ func main() {
 	httpLogger := httplog.NewLogger(appName, httplog.Options{JSON: true, LevelFieldName: "severity", Concise: true})
 
 	r := chi.NewRouter()
-	// r.Use(middleware.Throttle(8))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
@@ -75,9 +74,8 @@ func main() {
 	})
 
 	r.Route("/api", func(s chi.Router) {
-		s.Post("/create-random-simgers-and-albums", m.CreateRandomSingersAndAlbums)
-		s.Get("/search-album", m.SearchAlbumsUsingNamedArgument)
-		s.Get("/search-album-with-singer/{lastName}", m.getAlbumInfo)
+		s.Get("/search-albums-of-singer/{lastName}", m.getAlbumInfo)
+		s.Post("/create-album-for-singer/{lastName}", m.createAlbum)
 	})
 
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
@@ -91,6 +89,26 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
 }
 
+func (m *Music) createAlbum(w http.ResponseWriter, r *http.Request) {
+	if err := m.db.Transaction(func(tx *gorm.DB) error {
+		singerId, err := CreateSinger(m.db, "tako", "sukeo")
+		if err != nil {
+			log.Printf("Failed to create singer: %v\n", err)
+			errorRender(w, r, 500, err)
+		}
+		_, err = CreateAlbumWithRandomTracks(m.db, singerId, randAlbumTitle(), randInt(1, 22))
+		if err != nil {
+			log.Printf("Failed to create album: %v\n", err)
+			errorRender(w, r, 500, err)
+		}
+		return nil
+	}); err != nil {
+		log.Printf("Transaction failed: %v\n", err)
+		errorRender(w, r, 500, err)
+	}
+	render.JSON(w, r, struct{}{})
+}
+
 func (m *Music) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 	var singers []*Singer
 	lastName := chi.URLParam(r, "lastName")
@@ -98,7 +116,7 @@ func (m *Music) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 		errorRender(w, r, 500, err)
 	}
 	if len(singers) == 0 {
-		errorRender(w, r, 404, errors.New("User not found"))
+		errorRender(w, r, 404, errors.New("user not found"))
 	}
 	render.JSON(w, r, singers)
 }
@@ -128,6 +146,6 @@ func (m *Music) SearchAlbumsUsingNamedArgument(w http.ResponseWriter, r *http.Re
 	}
 }
 
-func doAutoMigrate(db *gorm.DB) {
-	db.AutoMigrate(&Singer{}, &Album{}, &Track{}, &Venue{}, &Concert{})
+func (m *Music) initData() {
+	CreateRandomSingersAndAlbums(m.db)
 }
