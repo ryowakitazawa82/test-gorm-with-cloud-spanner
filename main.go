@@ -76,6 +76,10 @@ func main() {
 		s.Post("/create-album-for-singer", m.createAlbum)
 	})
 
+	if servicePort != "" {
+		servicePort = "8080"
+	}
+
 	if err := http.ListenAndServe(":"+servicePort, r); err != nil {
 		oplog.Err(err)
 	}
