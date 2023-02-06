@@ -73,7 +73,7 @@ func main() {
 
 	r.Route("/api", func(s chi.Router) {
 		s.Get("/search-albums-of-singer/{lastName}", m.getAlbumInfo)
-		s.Post("/create-album-for-singer", m.createAlbum)
+		s.Post("/create-album-for-singer", m.createSingerAlbum)
 	})
 
 	if servicePort != "" {
@@ -91,14 +91,15 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 }
 
 type SingerAlbum struct {
-	FirstName string `json:"first_name,omitempty"`
-	LastName  string `json:"last_name,omitempty"`
-	AlbumName string `json:"album_name,omitempty"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	AlbumName string `json:"album_name"`
 }
 
-func (m *Music) createAlbum(w http.ResponseWriter, r *http.Request) {
+func (m *Music) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
 
 	postData := SingerAlbum{}
+
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&postData); err != nil {
 		errorRender(w, r, 500, err)
