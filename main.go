@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"flag"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -32,6 +33,9 @@ type Music struct {
 
 func main() {
 
+	migrateMode := flag.Bool("automigrate", false, "")
+	flag.Parse()
+
 	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
 		DisableNestedTransaction: true,
 		Logger:                   logger.Default.LogMode(logger.Error),
@@ -45,6 +49,11 @@ func main() {
 		db, _ := db.DB()
 		db.Close()
 	}()
+
+	if *migrateMode {
+		doAutoMigrate(db)
+		return
+	}
 
 	m := Music{db: db}
 
@@ -117,4 +126,8 @@ func (m *Music) SearchAlbumsUsingNamedArgument(w http.ResponseWriter, r *http.Re
 		}
 		render.JSON(w, r, albums)
 	}
+}
+
+func doAutoMigrate(db *gorm.DB) {
+	db.AutoMigrate(&Singer{}, &Album{}, &Track{}, &Venue{}, &Concert{})
 }
