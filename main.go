@@ -21,17 +21,17 @@ import (
 
 var appName = "sampleapp"
 
-// like, export CONNECTION_STRING="host=localhost port=15432 database=musics"
+// like, export CONNECTION_STRING="host=localhost port=5432 database=music"
 var connString string = os.Getenv("CONNECTION_STRING")
 var servicePort string = os.Getenv("PORT")
 
-type Music struct {
+type MusicOperation struct {
 	db *gorm.DB
 }
 
 func main() {
 
-	init := flag.Bool("init", false, "")
+	init := flag.Bool("init", false, "Generate initial data")
 	flag.Parse()
 
 	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
@@ -48,7 +48,7 @@ func main() {
 		db.Close()
 	}()
 
-	m := Music{db: db}
+	m := MusicOperation{db: db}
 
 	if *init {
 		m.initData()
@@ -96,7 +96,7 @@ type SingerAlbum struct {
 	AlbumName string `json:"album_name"`
 }
 
-func (m *Music) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
+func (m *MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
 
 	postData := SingerAlbum{}
 
@@ -122,10 +122,11 @@ func (m *Music) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, struct{}{})
 }
 
-func (m *Music) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
+func (m *MusicOperation) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 	var singers []*Singer
 	lastName := chi.URLParam(r, "lastName")
-	if err := m.db.Model(&Singer{}).Preload(clause.Associations).Where("last_name = ?", lastName).Debug().Find(&singers).Error; err != nil {
+	if err := m.db.Model(&Singer{}).Preload(clause.Associations).
+		Where("last_name = ?", lastName).Find(&singers).Error; err != nil {
 		errorRender(w, r, 500, err)
 	}
 	if len(singers) == 0 {
@@ -134,6 +135,6 @@ func (m *Music) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, singers)
 }
 
-func (m *Music) initData() {
+func (m *MusicOperation) initData() {
 	CreateRandomSingersAndAlbums(m.db)
 }
