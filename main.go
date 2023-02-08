@@ -96,7 +96,7 @@ type SingerAlbum struct {
 	AlbumName string `json:"album_name"`
 }
 
-func (m *MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
+func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
 
 	postData := SingerAlbum{}
 
@@ -122,7 +122,7 @@ func (m *MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Reques
 	render.JSON(w, r, struct{}{})
 }
 
-func (m *MusicOperation) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
+func (m MusicOperation) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 	var singers []*Singer
 	lastName := chi.URLParam(r, "lastName")
 	if err := m.db.Model(&Singer{}).Preload(clause.Associations).
@@ -135,6 +135,6 @@ func (m *MusicOperation) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, singers)
 }
 
-func (m *MusicOperation) initData() {
+func (m MusicOperation) initData() {
 	CreateRandomSingersAndAlbums(m.db)
 }
