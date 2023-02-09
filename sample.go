@@ -103,12 +103,6 @@ type Concert struct {
 
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-// func main() {
-// 	if err := RunSample(connectionString); err != nil {
-// 		os.Exit(1)
-// 	}
-// }
-
 func RunSample(connString string) error {
 	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
 		// DisableNestedTransaction will turn off the use of Savepoints if gorm

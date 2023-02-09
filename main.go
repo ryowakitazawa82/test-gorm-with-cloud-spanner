@@ -87,8 +87,8 @@ func main() {
 	})
 
 	r.Route("/api", func(s chi.Router) {
-		s.Get("/search-albums-of-singerid/{singerId}", m.getAlbumInfoWithSingerId)
-		s.Post("/create-album-for-singer", m.createSingerAlbum)
+		s.Get("/get-albums-of-singerid/{singerId}", m.getAlbumInfoWithSingerId)
+		s.Post("/register-singer-with-album", m.createSingerAlbum)
 	})
 
 	if servicePort != "" {
@@ -121,22 +121,26 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 	}
 	defer r.Body.Close()
 
-	var newSingerId string
+	var (
+		newSingerId string
+		newAlbumId  string
+	)
 	if err := m.db.Transaction(func(tx *gorm.DB) error {
 		singerId, err := CreateSinger(m.db, postData.FirstName, postData.LastName)
 		if err != nil {
 			errorRender(w, r, 500, err)
 		}
-		_, err = CreateAlbumWithRandomTracks(m.db, singerId, postData.AlbumName, randInt(1, 22))
+		albumId, err := CreateAlbumWithRandomTracks(m.db, singerId, postData.AlbumName, randInt(1, 22))
 		if err != nil {
 			errorRender(w, r, 500, err)
 		}
 		newSingerId = singerId
+		newAlbumId = albumId
 		return nil
 	}); err != nil {
 		errorRender(w, r, 500, err)
 	}
-	render.JSON(w, r, map[string]string{"id": newSingerId})
+	render.JSON(w, r, map[string]string{"singer_id": newSingerId, "album_id": newAlbumId})
 }
 
 func (m MusicOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.Request) {
