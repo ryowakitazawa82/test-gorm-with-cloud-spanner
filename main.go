@@ -88,6 +88,7 @@ func main() {
 
 	r.Route("/api", func(s chi.Router) {
 		s.Get("/search-albums-of-singer/{lastName}", m.getAlbumInfo)
+		s.Get("/search-albums-of-singerid/{singerId}", m.getAlbumInfoWithSingerId)
 		s.Post("/create-album-for-singer", m.createSingerAlbum)
 	})
 
@@ -105,13 +106,13 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
 }
 
-type SingerAlbum struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	AlbumName string `json:"album_name"`
-}
-
 func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
+
+	type SingerAlbum struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		AlbumName string `json:"album_name"`
+	}
 
 	postData := SingerAlbum{}
 
@@ -121,6 +122,7 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 	}
 	defer r.Body.Close()
 
+	var newSingerId string
 	if err := m.db.Transaction(func(tx *gorm.DB) error {
 		singerId, err := CreateSinger(m.db, postData.FirstName, postData.LastName)
 		if err != nil {
@@ -130,11 +132,25 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 		if err != nil {
 			errorRender(w, r, 500, err)
 		}
+		newSingerId = singerId
 		return nil
 	}); err != nil {
 		errorRender(w, r, 500, err)
 	}
-	render.JSON(w, r, struct{}{})
+	render.JSON(w, r, map[string]string{"id": newSingerId})
+}
+
+func (m MusicOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.Request) {
+	var singers []*Singer
+	singerId := chi.URLParam(r, "singerId")
+	if err := m.db.Model(&Singer{}).Preload(clause.Associations).
+		Where("id = ?", singerId).Find(&singers).Error; err != nil {
+		errorRender(w, r, 500, err)
+	}
+	if len(singers) == 0 {
+		errorRender(w, r, 404, errors.New("user not found"))
+	}
+	render.JSON(w, r, singers)
 }
 
 func (m MusicOperation) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
