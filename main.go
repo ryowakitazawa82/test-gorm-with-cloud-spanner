@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -21,12 +22,30 @@ import (
 
 var appName = "sampleapp"
 
-// like, export CONNECTION_STRING="host=localhost port=5432 database=music"
+// like, CONNECTION_STRING="host=localhost port=5432"
 var connString string = os.Getenv("CONNECTION_STRING")
 var servicePort string = os.Getenv("PORT")
+var maxRetry = 10
 
 type MusicOperation struct {
 	db *gorm.DB
+}
+
+func newDbConn(connString string) *gorm.DB {
+	log.Println("connString ", connString)
+	for i := 0; i < maxRetry; i++ {
+		db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
+			DisableNestedTransaction: true,
+			Logger:                   logger.Default.LogMode(logger.Error),
+		})
+		if err != nil {
+			log.Println(err, " Retrying...", i+1)
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		return db
+	}
+	return nil
 }
 
 func main() {
@@ -34,19 +53,15 @@ func main() {
 	init := flag.Bool("init", false, "Generate initial data")
 	flag.Parse()
 
-	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
-		DisableNestedTransaction: true,
-		Logger:                   logger.Default.LogMode(logger.Error),
-	})
-
-	if err != nil {
-		panic(err)
-	}
+	db := newDbConn(connString)
 
 	defer func() {
 		db, _ := db.DB()
 		db.Close()
 	}()
+
+	sqlDB, _ := db.DB()
+	sqlDB.SetMaxIdleConns(30)
 
 	m := MusicOperation{db: db}
 
