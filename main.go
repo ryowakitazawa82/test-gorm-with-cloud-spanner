@@ -60,9 +60,6 @@ func main() {
 		db.Close()
 	}()
 
-	sqlDB, _ := db.DB()
-	sqlDB.SetMaxIdleConns(30)
-
 	m := MusicOperation{db: db}
 
 	if *init {
