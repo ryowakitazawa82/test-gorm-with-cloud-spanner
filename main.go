@@ -87,7 +87,6 @@ func main() {
 	})
 
 	r.Route("/api", func(s chi.Router) {
-		s.Get("/search-albums-of-singer/{lastName}", m.getAlbumInfo)
 		s.Get("/search-albums-of-singerid/{singerId}", m.getAlbumInfoWithSingerId)
 		s.Post("/create-album-for-singer", m.createSingerAlbum)
 	})
@@ -145,19 +144,6 @@ func (m MusicOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.
 	singerId := chi.URLParam(r, "singerId")
 	if err := m.db.Model(&Singer{}).Preload(clause.Associations).
 		Where("id = ?", singerId).Find(&singers).Error; err != nil {
-		errorRender(w, r, 500, err)
-	}
-	if len(singers) == 0 {
-		errorRender(w, r, 404, errors.New("user not found"))
-	}
-	render.JSON(w, r, singers)
-}
-
-func (m MusicOperation) getAlbumInfo(w http.ResponseWriter, r *http.Request) {
-	var singers []*Singer
-	lastName := chi.URLParam(r, "lastName")
-	if err := m.db.Model(&Singer{}).Preload(clause.Associations).
-		Where("last_name = ?", lastName).Find(&singers).Error; err != nil {
 		errorRender(w, r, 500, err)
 	}
 	if len(singers) == 0 {
