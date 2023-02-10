@@ -31,7 +31,7 @@ type MusicOperation struct {
 	db *gorm.DB
 }
 
-func newDbConn(connString string) *gorm.DB {
+func newDbConn(connString string) (*gorm.DB, error) {
 	log.Println("connString ", connString)
 	for i := 0; i < maxRetry; i++ {
 		db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
@@ -43,9 +43,9 @@ func newDbConn(connString string) *gorm.DB {
 			time.Sleep(time.Second * 2)
 			continue
 		}
-		return db
+		return db, nil
 	}
-	return nil
+	return nil, errors.New("connection failure")
 }
 
 func main() {
@@ -53,7 +53,11 @@ func main() {
 	init := flag.Bool("init", false, "Generate initial data")
 	flag.Parse()
 
-	db := newDbConn(connString)
+	db, err := newDbConn(connString)
+
+	if err != nil {
+		panic(err)
+	}
 
 	defer func() {
 		db, _ := db.DB()
