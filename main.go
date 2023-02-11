@@ -69,6 +69,7 @@ func main() {
 	m := MusicOperation{db: db}
 
 	if *init {
+		m.db.Logger = m.db.Logger.LogMode(logger.Error)
 		m.initData()
 		return
 	}
