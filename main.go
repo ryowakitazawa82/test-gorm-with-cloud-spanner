@@ -25,18 +25,20 @@ var appName = "sampleapp"
 // like, CONNECTION_STRING="host=localhost port=5432"
 var connString string = os.Getenv("CONNECTION_STRING")
 var servicePort string = os.Getenv("PORT")
+var logLevel logger.LogLevel = logger.Info // for debug
+
 var maxRetry = 10
 
 type MusicOperation struct {
 	db *gorm.DB
 }
 
-func newDbConn(connString string) (*gorm.DB, error) {
+func newDbConn(connString string, logMode logger.LogLevel) (*gorm.DB, error) {
 	log.Println("connString ", connString)
 	for i := 0; i < maxRetry; i++ {
 		db, err := gorm.Open(postgres.Open(connString), &gorm.Config{
 			DisableNestedTransaction: true,
-			Logger:                   logger.Default.LogMode(logger.Error),
+			Logger:                   logger.Default.LogMode(logMode),
 		})
 		if err != nil {
 			log.Println(err, " Retrying...", i+1)
@@ -53,15 +55,15 @@ func main() {
 	init := flag.Bool("init", false, "Generate initial data")
 	flag.Parse()
 
-	db, err := newDbConn(connString)
+	db, err := newDbConn(connString, logLevel)
 
 	if err != nil {
 		panic(err)
 	}
 
 	defer func() {
-		db, _ := db.DB()
-		db.Close()
+		sqlDB, _ := db.DB()
+		sqlDB.Close()
 	}()
 
 	m := MusicOperation{db: db}
