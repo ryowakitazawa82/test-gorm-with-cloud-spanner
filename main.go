@@ -147,16 +147,16 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 }
 
 func (m MusicOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.Request) {
-	var singers []*Singer
+	var albums []*Album
 	singerId := chi.URLParam(r, "singerId")
-	if err := m.db.Model(&Singer{}).Preload(clause.Associations).
-		Where("id = ?", singerId).Find(&singers).Error; err != nil {
+	if err := m.db.Model(&Album{}).Preload(clause.Associations).
+		Where("singer_id = ?", singerId).Find(&albums).Error; err != nil {
 		errorRender(w, r, 500, err)
 	}
-	if len(singers) == 0 {
+	if len(albums) == 0 {
 		errorRender(w, r, 404, errors.New("user not found"))
 	}
-	render.JSON(w, r, singers)
+	render.JSON(w, r, albums)
 }
 
 func (m MusicOperation) initData() {
