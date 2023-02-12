@@ -157,9 +157,11 @@ func (m MusicDbOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *htt
 	if err := m.db.Model(&Album{}).Preload(clause.Associations).
 		Where("singer_id = ?", singerId).Find(&albums).Error; err != nil {
 		errorRender(w, r, 500, err)
+		return
 	}
 	if len(albums) == 0 {
 		errorRender(w, r, 404, errors.New("user not found"))
+		return
 	}
 	render.JSON(w, r, albums)
 }
