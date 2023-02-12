@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -121,7 +122,9 @@ func (m MusicDbOperation) createSingerAlbum(w http.ResponseWriter, r *http.Reque
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&postData); err != nil {
+		err = fmt.Errorf("lack of some parameters: error %w", err)
 		errorRender(w, r, 500, err)
+		return
 	}
 	defer r.Body.Close()
 
