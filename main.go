@@ -132,17 +132,18 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 	if err := m.db.Transaction(func(tx *gorm.DB) error {
 		singerId, err := CreateSinger(m.db, postData.FirstName, postData.LastName)
 		if err != nil {
-			errorRender(w, r, 500, err)
+			return err
 		}
 		albumId, err := CreateAlbumWithRandomTracks(m.db, singerId, postData.AlbumName, randInt(1, 22))
 		if err != nil {
-			errorRender(w, r, 500, err)
+			return err
 		}
 		newSingerId = singerId
 		newAlbumId = albumId
 		return nil
 	}); err != nil {
 		errorRender(w, r, 500, err)
+		return
 	}
 	render.JSON(w, r, map[string]string{"singer_id": newSingerId, "album_id": newAlbumId})
 }
