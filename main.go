@@ -41,7 +41,7 @@ func newDbConn(connString string, logMode logger.LogLevel) (*gorm.DB, error) {
 			Logger:                   logger.Default.LogMode(logMode),
 		})
 		if err != nil {
-			log.Println(err, " Retrying...", i+1)
+			log.Println(" Retrying...", i+1, " ", err)
 			time.Sleep(time.Second * 2)
 			continue
 		}
