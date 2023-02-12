@@ -130,11 +130,11 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 		newAlbumId  string
 	)
 	if err := m.db.Transaction(func(tx *gorm.DB) error {
-		singerId, err := CreateSinger(m.db, postData.FirstName, postData.LastName)
+		singerId, err := CreateSinger(tx, postData.FirstName, postData.LastName)
 		if err != nil {
 			return err
 		}
-		albumId, err := CreateAlbumWithRandomTracks(m.db, singerId, postData.AlbumName, randInt(1, 22))
+		albumId, err := CreateAlbumWithRandomTracks(tx, singerId, postData.AlbumName, randInt(1, 22))
 		if err != nil {
 			return err
 		}
