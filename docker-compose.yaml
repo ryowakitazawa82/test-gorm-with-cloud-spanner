@@ -9,10 +9,12 @@ services:
 
     environment:
     - PORT=8080
-    - PROJECT_ID=$GOOGLE_CLOUD_PROJECT
+    - PROJECT_ID=${GOOGLE_CLOUD_PROJECT}
     - INSTANCE_NAME=test-instance
     - CONNECTION_STRING="host=localhost"
     - DATABASE_NAME=music
 
     volumes:
+    # If you're in Cloud Shell, change it as below,
+    # - ${CLOUDSDK_CONFIG}:/.config/gcloud
     - ${HOME}/.config:/root/.config
