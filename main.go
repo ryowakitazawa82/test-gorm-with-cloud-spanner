@@ -111,13 +111,13 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 
 func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
 
-	type SingerAlbum struct {
+	type SingerAlbumInfo struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 		AlbumName string `json:"album_name"`
 	}
 
-	postData := SingerAlbum{}
+	postData := SingerAlbumInfo{}
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&postData); err != nil {
