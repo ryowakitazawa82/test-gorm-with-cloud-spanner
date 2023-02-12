@@ -29,7 +29,7 @@ var logLevel logger.LogLevel = logger.Info // for debug
 
 var maxRetry = 10
 
-type MusicOperation struct {
+type MusicDbOperation struct {
 	db *gorm.DB
 }
 
@@ -66,7 +66,7 @@ func main() {
 		sqlDB.Close()
 	}()
 
-	m := MusicOperation{db: db}
+	m := MusicDbOperation{db: db}
 
 	if *init {
 		m.db.Logger = m.db.Logger.LogMode(logger.Error)
@@ -109,7 +109,7 @@ var errorRender = func(w http.ResponseWriter, r *http.Request, httpCode int, err
 	render.JSON(w, r, map[string]interface{}{"ERROR": err.Error()})
 }
 
-func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
+func (m MusicDbOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request) {
 
 	type SingerAlbumInfo struct {
 		FirstName string `json:"first_name"`
@@ -148,7 +148,7 @@ func (m MusicOperation) createSingerAlbum(w http.ResponseWriter, r *http.Request
 	render.JSON(w, r, map[string]string{"singer_id": newSingerId, "album_id": newAlbumId})
 }
 
-func (m MusicOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.Request) {
+func (m MusicDbOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.Request) {
 	var albums []*Album
 	singerId := chi.URLParam(r, "singerId")
 	if err := m.db.Model(&Album{}).Preload(clause.Associations).
@@ -161,6 +161,6 @@ func (m MusicOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *http.
 	render.JSON(w, r, albums)
 }
 
-func (m MusicOperation) initData() {
+func (m MusicDbOperation) initData() {
 	CreateRandomSingersAndAlbums(m.db)
 }
