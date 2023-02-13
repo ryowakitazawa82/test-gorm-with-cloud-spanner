@@ -123,7 +123,7 @@ func (m MusicDbOperation) createSingerAlbum(w http.ResponseWriter, r *http.Reque
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&postData); err != nil {
 		err = fmt.Errorf("lack of some parameters: error %w", err)
-		errorRender(w, r, 500, err)
+		errorRender(w, r, http.StatusBadRequest, err)
 		return
 	}
 	defer r.Body.Close()
@@ -145,7 +145,7 @@ func (m MusicDbOperation) createSingerAlbum(w http.ResponseWriter, r *http.Reque
 		newAlbumId = albumId
 		return nil
 	}); err != nil {
-		errorRender(w, r, 500, err)
+		errorRender(w, r, http.StatusInternalServerError, err)
 		return
 	}
 	render.JSON(w, r, map[string]string{"singer_id": newSingerId, "album_id": newAlbumId})
@@ -156,11 +156,11 @@ func (m MusicDbOperation) getAlbumInfoWithSingerId(w http.ResponseWriter, r *htt
 	singerId := chi.URLParam(r, "singerId")
 	if err := m.db.Model(&Album{}).Preload(clause.Associations).
 		Where("singer_id = ?", singerId).Find(&albums).Error; err != nil {
-		errorRender(w, r, 500, err)
+		errorRender(w, r, http.StatusInternalServerError, err)
 		return
 	}
 	if len(albums) == 0 {
-		errorRender(w, r, 404, errors.New("user not found"))
+		errorRender(w, r, http.StatusNotFound, errors.New("user not found"))
 		return
 	}
 	render.JSON(w, r, albums)
