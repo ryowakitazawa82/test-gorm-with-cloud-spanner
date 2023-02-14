@@ -122,7 +122,7 @@ func (m MusicDbOperation) createSingerAlbum(w http.ResponseWriter, r *http.Reque
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&postData); err != nil {
-		err = fmt.Errorf("lack of some parameters: error %w", err)
+		err = fmt.Errorf("invalid parameters in your request: %w", err)
 		errorRender(w, r, http.StatusBadRequest, err)
 		return
 	}
